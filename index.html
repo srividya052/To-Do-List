@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>To-Do List</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <main class="app">
+    <h1 class="app-title">To-Do List</h1>
+
+    <!-- ===== Add Task Form ===== -->
+    <form id="task-form" class="task-form">
+      <label for="task-input" class="visually-hidden">New task</label>
+      <input
+        type="text"
+        id="task-input"
+        placeholder="What needs to be done?"
+        autocomplete="off"
+        required
+      />
+      <button type="submit" class="btn btn-primary">Add</button>
+    </form>
+
+    <!-- ===== Filters ===== -->
+    <div class="filters" role="tablist" aria-label="Filter tasks">
+      <button class="filter-btn is-active" data-filter="all" role="tab" aria-selected="true">All</button>
+      <button class="filter-btn" data-filter="active" role="tab" aria-selected="false">Active</button>
+      <button class="filter-btn" data-filter="completed" role="tab" aria-selected="false">Completed</button>
+    </div>
+
+    <!-- ===== Task List (built dynamically by script.js) ===== -->
+    <ul id="task-list" class="task-list"></ul>
+
+    <!-- ===== Empty state ===== -->
+    <p id="empty-state" class="empty-state" hidden>No tasks here yet.</p>
+
+    <!-- ===== Footer: counter + clear completed ===== -->
+    <div class="list-footer">
+      <span id="items-left">0 items left</span>
+      <button id="clear-completed" class="btn btn-text">Clear completed</button>
+    </div>
+  </main>
+
+  <!-- ===== Edit Task Modal/Dialog ===== -->
+  <div id="edit-dialog" class="dialog-overlay" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="edit-dialog-title">
+      <h2 id="edit-dialog-title">Edit Task</h2>
+      <form id="edit-form">
+        <label for="edit-input" class="visually-hidden">Edit task text</label>
+        <input type="text" id="edit-input" required />
+        <div class="dialog-actions">
+          <button type="button" id="cancel-edit" class="btn btn-text">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
