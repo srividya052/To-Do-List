@@ -1,40 +1,31 @@
-/* ===========================================================
-   script.js — To-Do List App
-   Full CRUD + localStorage persistence + filtering
-   Built with dynamic DOM creation and event delegation
-   (no inline onclick handlers, no per-item listeners)
-   =========================================================== */
-
 (function () {
   "use strict";
 
-  /* ---------------- State ---------------- */
+  /* ---- State ---- */
   const STORAGE_KEY = "todo-app-tasks";
-  let tasks = loadTasks();          // [{ id, text, completed }]
-  let currentFilter = "all";        // "all" | "active" | "completed"
-  let editingTaskId = null;         // id of task currently open in edit dialog
+  let tasks = loadTasks();       // [{ id, text, completed }]
+  let currentFilter = "all";    // "all" | "active" | "completed"
+  let editingId = null;         // id of task being edited
 
-  /* ---------------- DOM references ---------------- */
-  const taskForm = document.getElementById("task-form");
-  const taskInput = document.getElementById("task-input");
-  const taskList = document.getElementById("task-list");
-  const emptyState = document.getElementById("empty-state");
-  const itemsLeftEl = document.getElementById("items-left");
-  const clearCompletedBtn = document.getElementById("clear-completed");
-  const filterButtons = document.querySelectorAll(".filter-btn");
+  /* ---- DOM refs ---- */
+  const taskForm        = document.getElementById("task-form");
+  const taskInput       = document.getElementById("task-input");
+  const taskList        = document.getElementById("task-list");
+  const emptyState      = document.getElementById("empty-state");
+  const itemsLeftEl     = document.getElementById("items-left");
+  const clearBtn        = document.getElementById("clear-completed");
+  const filterBtns      = document.querySelectorAll(".filter-btn");
+  const editDialog      = document.getElementById("edit-dialog");
+  const editForm        = document.getElementById("edit-form");
+  const editInput       = document.getElementById("edit-input");
+  const cancelEditBtn   = document.getElementById("cancel-edit");
 
-  const editDialog = document.getElementById("edit-dialog");
-  const editForm = document.getElementById("edit-form");
-  const editInput = document.getElementById("edit-input");
-  const cancelEditBtn = document.getElementById("cancel-edit");
-
-  /* ---------------- Persistence (localStorage) ---------------- */
+  /* ---- localStorage ---- */
   function loadTasks() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];
-    } catch (err) {
-      console.error("Failed to load tasks from localStorage:", err);
+    } catch (e) {
       return [];
     }
   }
@@ -42,24 +33,23 @@
   function saveTasks() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch (err) {
-      console.error("Failed to save tasks to localStorage:", err);
+    } catch (e) {
+      console.error("Could not save tasks:", e);
     }
   }
 
-  /* ---------------- CRUD operations ---------------- */
+  /* ---- CRUD ---- */
   function createTask(text) {
-    const newTask = {
+    tasks.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       text: text.trim(),
       completed: false,
-    };
-    tasks.push(newTask);
+    });
     saveTasks();
     render();
   }
 
-  function updateTaskText(id, newText) {
+  function updateTask(id, newText) {
     const task = tasks.find((t) => t.id === id);
     if (task && newText.trim()) {
       task.text = newText.trim();
@@ -68,7 +58,7 @@
     }
   }
 
-  function toggleTaskCompleted(id) {
+  function toggleTask(id) {
     const task = tasks.find((t) => t.id === id);
     if (task) {
       task.completed = !task.completed;
@@ -83,45 +73,41 @@
     render();
   }
 
-  function clearCompletedTasks() {
+  function clearCompleted() {
     tasks = tasks.filter((t) => !t.completed);
     saveTasks();
     render();
   }
 
-  /* ---------------- Filtering ---------------- */
-  function getFilteredTasks() {
-    if (currentFilter === "active") {
-      return tasks.filter((t) => !t.completed);
-    }
-    if (currentFilter === "completed") {
-      return tasks.filter((t) => t.completed);
-    }
+  /* ---- Filtering ---- */
+  function getFiltered() {
+    if (currentFilter === "active")    return tasks.filter((t) => !t.completed);
+    if (currentFilter === "completed") return tasks.filter((t) =>  t.completed);
     return tasks;
   }
 
   function setFilter(filter) {
     currentFilter = filter;
-    filterButtons.forEach((btn) => {
-      const isActive = btn.dataset.filter === filter;
-      btn.classList.toggle("is-active", isActive);
-      btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    filterBtns.forEach((btn) => {
+      const active = btn.dataset.filter === filter;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
     });
     render();
   }
 
-  /* ---------------- Dynamic DOM creation ---------------- */
-  function createTaskElement(task) {
+  /* ---- Build a single <li> ---- */
+  function makeTaskEl(task) {
     const li = document.createElement("li");
     li.className = "task-item" + (task.completed ? " is-completed" : "");
     li.dataset.id = task.id;
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.className = "task-checkbox";
-    checkbox.checked = task.completed;
-    checkbox.setAttribute("aria-label", "Mark \"" + task.text + "\" as " + (task.completed ? "active" : "completed"));
-    checkbox.dataset.action = "toggle";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "task-checkbox";
+    cb.checked = task.completed;
+    cb.dataset.action = "toggle";
+    cb.setAttribute("aria-label", (task.completed ? "Mark active: " : "Mark done: ") + task.text);
 
     const span = document.createElement("span");
     span.className = "task-text";
@@ -134,148 +120,132 @@
     editBtn.type = "button";
     editBtn.className = "icon-btn edit-btn";
     editBtn.dataset.action = "edit";
-    editBtn.setAttribute("aria-label", "Edit \"" + task.text + "\"");
-    editBtn.textContent = "\u270E"; // pencil icon
+    editBtn.setAttribute("aria-label", "Edit: " + task.text);
+    editBtn.textContent = "✎";
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "icon-btn delete-btn";
-    deleteBtn.dataset.action = "delete";
-    deleteBtn.setAttribute("aria-label", "Delete \"" + task.text + "\"");
-    deleteBtn.textContent = "\u2715"; // X icon
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "icon-btn delete-btn";
+    delBtn.dataset.action = "delete";
+    delBtn.setAttribute("aria-label", "Delete: " + task.text);
+    delBtn.textContent = "✕";
 
     actions.appendChild(editBtn);
-    actions.appendChild(deleteBtn);
-
-    li.appendChild(checkbox);
+    actions.appendChild(delBtn);
+    li.appendChild(cb);
     li.appendChild(span);
     li.appendChild(actions);
-
     return li;
   }
 
+  /* ---- Render ---- */
   function render() {
-    const filtered = getFilteredTasks();
+    const filtered = getFiltered();
 
-    // Rebuild the list (simple + safe for a list this size)
+    // Rebuild list
     taskList.innerHTML = "";
-    const fragment = document.createDocumentFragment();
-    filtered.forEach((task) => {
-      fragment.appendChild(createTaskElement(task));
-    });
-    taskList.appendChild(fragment);
+    const frag = document.createDocumentFragment();
+    filtered.forEach((t) => frag.appendChild(makeTaskEl(t)));
+    taskList.appendChild(frag);
 
     // Empty state
-    emptyState.hidden = filtered.length !== 0;
+    emptyState.classList.toggle("is-visible", filtered.length === 0);
 
-    // Footer counter
+    // Counter
     const activeCount = tasks.filter((t) => !t.completed).length;
     itemsLeftEl.textContent = activeCount + (activeCount === 1 ? " item left" : " items left");
 
-    // Disable "clear completed" if nothing to clear
+    // Clear completed button
     const hasCompleted = tasks.some((t) => t.completed);
-    clearCompletedBtn.disabled = !hasCompleted;
-    clearCompletedBtn.style.opacity = hasCompleted ? "1" : "0.5";
-    clearCompletedBtn.style.cursor = hasCompleted ? "pointer" : "default";
+    clearBtn.disabled = !hasCompleted;
   }
 
-  /* ---------------- Edit dialog ---------------- */
-  function openEditDialog(id) {
+  /* ---- Edit dialog open / close ---- */
+  function openEdit(id) {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
-    editingTaskId = id;
+    editingId = id;
     editInput.value = task.text;
-    editDialog.hidden = false;
-    editInput.focus();
-    editInput.select();
+    editDialog.classList.add("is-open");
+    editDialog.setAttribute("aria-hidden", "false");
+    // Small delay so the element is visible before focusing
+    setTimeout(() => {
+      editInput.focus();
+      editInput.select();
+    }, 50);
   }
 
-  function closeEditDialog() {
-    editDialog.hidden = true;
-    editingTaskId = null;
+  function closeEdit() {
+    editDialog.classList.remove("is-open");
+    editDialog.setAttribute("aria-hidden", "true");
+    editingId = null;
     editForm.reset();
   }
 
-  /* ---------------- Event listeners ---------------- */
+  /* ---- Event listeners ---- */
 
-  // Add task
-  taskForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-    const value = taskInput.value.trim();
-    if (!value) return;
-    createTask(value);
+  // Submit new task
+  taskForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const val = taskInput.value.trim();
+    if (!val) return;
+    createTask(val);
     taskInput.value = "";
     taskInput.focus();
   });
 
   // Filter buttons
-  filterButtons.forEach((btn) => {
-    btn.addEventListener("click", function () {
-      setFilter(btn.dataset.filter);
-    });
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => setFilter(btn.dataset.filter));
   });
 
   // Clear completed
-  clearCompletedBtn.addEventListener("click", function () {
-    if (!clearCompletedBtn.disabled) {
-      clearCompletedTasks();
-    }
-  });
+  clearBtn.addEventListener("click", clearCompleted);
 
-  // Event delegation: one listener on the list handles toggle/edit/delete
-  // for every task item, including ones created dynamically later.
-  taskList.addEventListener("click", function (event) {
-    const actionEl = event.target.closest("[data-action]");
+  // Delegated click: edit / delete
+  taskList.addEventListener("click", function (e) {
+    const actionEl = e.target.closest("[data-action]");
     if (!actionEl) return;
-
-    const li = event.target.closest(".task-item");
+    const li = e.target.closest(".task-item");
     if (!li) return;
-    const id = li.dataset.id;
-    const action = actionEl.dataset.action;
+    const { id } = li.dataset;
+    const { action } = actionEl.dataset;
 
-    if (action === "edit") {
-      openEditDialog(id);
-    } else if (action === "delete") {
-      deleteTask(id);
-    }
+    if (action === "edit")   openEdit(id);
+    if (action === "delete") deleteTask(id);
   });
 
-  // Checkbox "change" events also need delegation (change doesn't bubble in old IE,
-  // but it does in all modern browsers, so this is safe)
-  taskList.addEventListener("change", function (event) {
-    const checkbox = event.target.closest('[data-action="toggle"]');
-    if (!checkbox) return;
-    const li = event.target.closest(".task-item");
+  // Delegated change: checkbox toggle
+  taskList.addEventListener("change", function (e) {
+    const cb = e.target.closest('[data-action="toggle"]');
+    if (!cb) return;
+    const li = e.target.closest(".task-item");
     if (!li) return;
-    toggleTaskCompleted(li.dataset.id);
+    toggleTask(li.dataset.id);
   });
 
-  // Edit dialog: save
-  editForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-    if (editingTaskId) {
-      updateTaskText(editingTaskId, editInput.value);
-    }
-    closeEditDialog();
+  // Save edit
+  editForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (editingId) updateTask(editingId, editInput.value);
+    closeEdit();
   });
 
-  // Edit dialog: cancel
-  cancelEditBtn.addEventListener("click", closeEditDialog);
+  // Cancel edit
+  cancelEditBtn.addEventListener("click", closeEdit);
 
-  // Edit dialog: close on overlay click (but not when clicking inside the dialog box)
-  editDialog.addEventListener("click", function (event) {
-    if (event.target === editDialog) {
-      closeEditDialog();
-    }
+  // Close on overlay backdrop click
+  editDialog.addEventListener("click", function (e) {
+    if (e.target === editDialog) closeEdit();
   });
 
-  // Edit dialog: close on Escape
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && !editDialog.hidden) {
-      closeEditDialog();
+  // Close on Escape
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && editDialog.classList.contains("is-open")) {
+      closeEdit();
     }
   });
 
-  /* ---------------- Initial render ---------------- */
+  /* ---- Initial render ---- */
   render();
 })();
