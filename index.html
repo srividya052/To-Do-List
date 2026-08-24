@@ -9,15 +9,29 @@
 <body>
   <main class="app">
     <h1 class="app-title">To-Do List</h1>
+        <!-- Auth Section -->
+   <div id="auth-section" class="auth-section">
+      <form id="auth-form" class="auth-form">
+        <input type="email" id="email-input" placeholder="Email" autocomplete="email" required />
+        <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" required />
+        <div class="auth-actions">
+          <button type="submit" id="signin-btn" class="btn btn-primary">Sign In</button>
+          <button type="button" id="signup-btn" class="btn btn-text">Sign Up</button>
+        </div>
+      </form>
+      <p id="auth-status"></p>
+    </div>
 
+    <!-- Signed-in view -->
+    <div id="app-section" class="app-section" style="display: none;">
+      <div class="user-bar">
+        <span id="user-email"></span>
+        <button id="signout-btn" class="btn btn-text">Sign Out</button>
+      </div> 
+      
     <!-- Add Task Form -->
     <form id="task-form" class="task-form">
-      <label for="task-input" class="visually-hidden">New task</label>
-      <input
-        type="text"
-        id="task-input"
-        placeholder="What needs to be done?"
-        autocomplete="off"
+      <label for="task-input" class="visually-hidden">New t
       />
       <button type="submit" class="btn btn-primary">Add</button>
     </form>
@@ -40,6 +54,7 @@
       <span id="items-left">0 items left</span>
       <button id="clear-completed" class="btn btn-text">Clear completed</button>
     </div>
+    </div>
   </main>
 
   <!-- Edit Dialog -->
@@ -57,6 +72,7 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script type="module" src="client.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
