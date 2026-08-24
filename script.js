@@ -1,3 +1,5 @@
+import { supabase } from './client.js';
+
 (function () {
   "use strict";
 
@@ -19,6 +21,17 @@
   const editForm        = document.getElementById("edit-form");
   const editInput       = document.getElementById("edit-input");
   const cancelEditBtn   = document.getElementById("cancel-edit");
+
+  /* ---- Auth DOM refs ---- */
+  const authSection     = document.getElementById("auth-section");
+  const appSection      = document.getElementById("app-section");
+  const authForm        = document.getElementById("auth-form");
+  const emailInput      = document.getElementById("email-input");
+  const passwordInput   = document.getElementById("password-input");
+  const signupBtn       = document.getElementById("signup-btn");
+  const authStatus      = document.getElementById("auth-status");
+  const userEmailEl     = document.getElementById("user-email");
+  const signoutBtn      = document.getElementById("signout-btn");
 
   /* ---- localStorage ---- */
   function loadTasks() {
@@ -142,20 +155,16 @@
   function render() {
     const filtered = getFiltered();
 
-    // Rebuild list
     taskList.innerHTML = "";
     const frag = document.createDocumentFragment();
     filtered.forEach((t) => frag.appendChild(makeTaskEl(t)));
     taskList.appendChild(frag);
 
-    // Empty state
     emptyState.classList.toggle("is-visible", filtered.length === 0);
 
-    // Counter
     const activeCount = tasks.filter((t) => !t.completed).length;
     itemsLeftEl.textContent = activeCount + (activeCount === 1 ? " item left" : " items left");
 
-    // Clear completed button
     const hasCompleted = tasks.some((t) => t.completed);
     clearBtn.disabled = !hasCompleted;
   }
@@ -168,7 +177,6 @@
     editInput.value = task.text;
     editDialog.classList.add("is-open");
     editDialog.setAttribute("aria-hidden", "false");
-    // Small delay so the element is visible before focusing
     setTimeout(() => {
       editInput.focus();
       editInput.select();
@@ -182,9 +190,7 @@
     editForm.reset();
   }
 
-  /* ---- Event listeners ---- */
-
-  // Submit new task
+  /* ---- Task-related event listeners ---- */
   taskForm.addEventListener("submit", function (e) {
     e.preventDefault();
     const val = taskInput.value.trim();
@@ -194,15 +200,12 @@
     taskInput.focus();
   });
 
-  // Filter buttons
   filterBtns.forEach((btn) => {
     btn.addEventListener("click", () => setFilter(btn.dataset.filter));
   });
 
-  // Clear completed
   clearBtn.addEventListener("click", clearCompleted);
 
-  // Delegated click: edit / delete
   taskList.addEventListener("click", function (e) {
     const actionEl = e.target.closest("[data-action]");
     if (!actionEl) return;
@@ -215,7 +218,6 @@
     if (action === "delete") deleteTask(id);
   });
 
-  // Delegated change: checkbox toggle
   taskList.addEventListener("change", function (e) {
     const cb = e.target.closest('[data-action="toggle"]');
     if (!cb) return;
@@ -224,28 +226,96 @@
     toggleTask(li.dataset.id);
   });
 
-  // Save edit
   editForm.addEventListener("submit", function (e) {
     e.preventDefault();
     if (editingId) updateTask(editingId, editInput.value);
     closeEdit();
   });
 
-  // Cancel edit
   cancelEditBtn.addEventListener("click", closeEdit);
 
-  // Close on overlay backdrop click
   editDialog.addEventListener("click", function (e) {
     if (e.target === editDialog) closeEdit();
   });
 
-  // Close on Escape
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && editDialog.classList.contains("is-open")) {
       closeEdit();
     }
   });
 
-  /* ---- Initial render ---- */
-  render();
+  /* ---- Auth logic ---- */
+
+  function showApp(user) {
+    authSection.style.display = "none";
+    appSection.style.display = "block";
+    userEmailEl.textContent = user.email;
+    render();
+  }
+
+  function showAuth() {
+    authSection.style.display = "block";
+    appSection.style.display = "none";
+    authForm.reset();
+    authStatus.textContent = "";
+  }
+
+  // Sign in (default form submit)
+  authForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    authStatus.textContent = "Signing in...";
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: emailInput.value,
+      password: passwordInput.value,
+    });
+    if (error) {
+      authStatus.textContent = error.message;
+      return;
+    }
+    authStatus.textContent = "";
+  });
+
+  // Sign up (separate button, not default submit)
+  signupBtn.addEventListener("click", async function () {
+    authStatus.textContent = "Signing up...";
+    const { data, error } = await supabase.auth.signUp({
+      email: emailInput.value,
+      password: passwordInput.value,
+    });
+    if (error) {
+      authStatus.textContent = error.message;
+      return;
+    }
+    authStatus.textContent = "Check your email to confirm your account.";
+  });
+
+  // Sign out
+  signoutBtn.addEventListener("click", async function () {
+    await supabase.auth.signOut();
+  });
+
+  // React to auth state changes (login, logout, token refresh, etc.)
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session && session.user) {
+      showApp(session.user);
+    } else {
+      showAuth();
+    }
+  });
+
+  // On page load, check if a session already exists
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session && session.user) {
+      showApp(session.user);
+    } else {
+      showAuth();
+    }
+  });
+
+  /* ---- Initial render (auth listener above handles first paint) ---- */
 })();
+  
+   
+      
+
+    
